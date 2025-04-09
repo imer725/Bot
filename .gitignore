@@ -1,37 +1,139 @@
-# Compiled source #
-###################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+import random
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
+# Bot Token
+TOKEN = 7325807571:AAE-wxy8jWW8-iXFy_xTSJVDVBcSP2t8K0Y
 
-# Logs and databases #
-######################
-*.log
-*.sql
-*.sqlite
+# Kullanıcı verisi (10000000) saklamak için basit bir dictionary
+user_data = {}
 
-# OS generated files #
-######################
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Komutlar
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("🥰Botumuza tekrar hoşgeldin! Aşağıdaki komutları kullanabilirsiniz🥰\n"
+                              "/bj [miktar] - Black Jack oyununu başlatır\n"
+                              "/cek - Kart çeker\n"
+                              "/bitir - Black Jack oyununu bitirir\n"
+                              "/slot [miktar] - Slot oyununu oynamak için bahis yapın\n"
+                              "/ip [ip_adresi] - IP sorgu yapar\n"
+                              "/bakiye - Mevcut bakiyenizi kontrol edin\n"
+                              "/risk - Risk oyunu oynayıp bakiye kazanabilirsiniz\n"
+                              "/borc [Kullanıcı İd] [miktar] - Başka bir kullanıcıya bakiye gönderir\n"
+                              "/zenginler - Genel sıralamayı gösterir\n"
+                              "/bakiyever [chat_id] [miktar] - Bir kullanıcıya bakiye ekler (sadece kurucu)")
+
+def bakiye(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    balance = user_data.get(user_id, 0)
+    update.message.reply_text(f"💰 Mevcut bakiyeniz: {balance} TL")
+
+def bj(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    if len(context.args) < 1:
+        update.message.reply_text("Lütfen bir miktar belirtin.")
+        return
+    try:
+        bet_amount = int(context.args[0])
+    except ValueError:
+        update.message.reply_text("Geçersiz miktar.")
+        return
+    
+    balance = user_data.get(user_id, 0)
+    if balance < bet_amount:
+        update.message.reply_text("Yeterli bakiyeniz yok.")
+        return
+
+    # Black Jack başlangıcı
+    update.message.reply_text(f"🃏 Black Jack oyununu {bet_amount} TL ile başlattınız!")
+
+    # Oyun bitimi - burada Black Jack mantığını ekleyebilirsiniz.
+
+def slot(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    if len(context.args) < 1:
+        update.message.reply_text("Lütfen bir miktar belirtin.")
+        return
+    try:
+        bet_amount = int(context.args[0])
+    except ValueError:
+        update.message.reply_text("Geçersiz miktar.")
+        return
+
+    balance = user_data.get(user_id, 0)
+    if balance < bet_amount:
+        update.message.reply_text("Yeterli bakiyeniz yok.")
+        return
+
+    # Slot oyunu mantığını buraya ekleyebilirsiniz.
+    update.message.reply_text(f"🎰 Slot oyununu {bet_amount} TL ile oynuyorsunuz!")
+
+def ip_sorgu(update: Update, context: CallbackContext):
+    if len(context.args) < 1:
+        update.message.reply_text("Lütfen bir IP adresi belirtin.")
+        return
+    ip_address = context.args[0]
+    # Burada IP sorgulama yapabilirsiniz.
+    update.message.reply_text(f"IP adresi sorgulandı: {ip_address}")
+
+def borc(update: Update, context: CallbackContext):
+    if len(context.args) < 2:
+        update.message.reply_text("5853688989 10000000")
+        return
+    try:
+        recipient_id = int(context.args[0])
+        amount = int(context.args[1])
+    except ValueError:
+        update.message.reply_text("Geçersiz veri.")
+        return
+    
+    sender_id = update.message.from_user.id
+    sender_balance = user_data.get(sender_id, 0)
+    if sender_balance < amount:
+        update.message.reply_text("Yeterli bakiyeniz yok.")
+        return
+
+    # Borç gönderme işlemi
+    user_data[sender_id] -= amount
+    user_data[recipient_id] = user_data.get(recipient_id, 0) + amount
+    update.message.reply_text(f"💸 {recipient_id} kullanıcısına {amount} TL borç gönderdiniz.")
+
+def zenginler(update: Update, context: CallbackContext):
+    top_users = sorted(user_data.items(), key=lambda x: x[1], reverse=True)
+    top_users_str = "\n".join([f"User {user_id}: {balance} TL" for user_id, balance in top_users])
+    update.message.reply_text(f"🏆 Genel Zenginler Sıralaması:\n{top_users_str}")
+
+def bakiyever(update: Update, context: CallbackContext):
+    if len(context.args) < 2:
+        update.message.reply_text("Lütfen bir kullanıcı ID'si ve miktar belirtin.")
+        return
+    if update.message.from_user.id != YOUR_CREATOR_ID:  # Botun kurucusu
+        update.message.reply_text("Bu komutu yalnızca kurucu kullanabilir.")
+        return
+    try:
+        user_id = int(context.args[0])
+        amount = int(context.args[1])
+    except ValueError:
+        update.message.reply_text("Geçersiz veri.")
+        return
+
+    user_data[user_id] = user_data.get(user_id, 0) + amount
+    update.message.reply_text(f"💰 {user_id} kullanıcısına {amount} TL bakiye eklendi.")
+
+def main():
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("bakiye", bakiye))
+    dp.add_handler(CommandHandler("bj", bj, pass_args=True))
+    dp.add_handler(CommandHandler("slot", slot, pass_args=True))
+    dp.add_handler(CommandHandler("ip", ip_sorgu, pass_args=True))
+    dp.add_handler(CommandHandler("borc", borc, pass_args=True))
+    dp.add_handler(CommandHandler("zenginler", zenginler))
+    dp.add_handler(CommandHandler("bakiyever", bakiyever, pass_args=True))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
